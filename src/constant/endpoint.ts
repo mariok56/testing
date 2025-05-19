@@ -3,12 +3,13 @@ export const endpoints = {
     login: '/auth/login',
     register: '/auth/signup',
     verify: '/auth/verify-otp',
-    resendOtp: '/auth/resend-otp',
+    resendOtp: '/auth/resend-verification-otp', // Updated to match the API documentation
     refreshToken: '/auth/refresh-token',
     forgotPassword: '/auth/forgot-password',
   },
   user: {
-    getUser: '/user/profile/:userId',
+    getUser: '/user/profile', // Changed from '/user/profile/:userId'
+    getUserById: '/user/profile/:userId', // Added for getting other user profiles
     updateUser: '/user/profile',
   },
   posts: {

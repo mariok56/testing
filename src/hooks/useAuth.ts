@@ -1,6 +1,7 @@
 import {useMutation, useQuery} from '@tanstack/react-query';
 import * as authApi from '../services/authApi';
 import {storeTokens, getTokens} from '../lib/axioInstance';
+import {ImageFile} from '../types/auth';
 
 // Types for auth data
 interface LoginData {
@@ -8,12 +9,13 @@ interface LoginData {
   password: string;
 }
 
+// Updated to use ImageFile instead of File
 interface SignupData {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  profileImage?: File;
+  profileImage?: ImageFile; // Changed from File to ImageFile
 }
 
 interface VerifyOtpData {
@@ -151,13 +153,13 @@ export const useUserProfile = () => {
   });
 };
 
-// Hook to update user profile
+// Hook to update user profile - updated with ImageFile type
 export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: async (data: {
       firstName?: string;
       lastName?: string;
-      profileImage?: File;
+      profileImage?: ImageFile; // Changed from File to ImageFile
     }) => {
       const response = await authApi.updateUserProfile(data);
 

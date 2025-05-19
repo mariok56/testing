@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
 import {refreshAccessToken} from '../services/authApi';
 
-const BASE_URL = 'https://backend-practice.eurisko.me';
+const BASE_URL = 'https://backend-practice.eurisko.me/api';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

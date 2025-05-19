@@ -6,7 +6,8 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z
     .string()
@@ -19,8 +20,9 @@ export const registerSchema = z.object({
     .regex(/^\d+$/, 'Phone number must contain only digits'),
 });
 
+// Updated to require 6 digits instead of 4
 export const verificationSchema = z.object({
-  code: z.string().length(4, 'Verification code must be 4 digits'),
+  code: z.string().length(6, 'Verification code must be 6 digits'),
 });
 
 export const forgotPasswordSchema = z.object({

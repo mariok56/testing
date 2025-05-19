@@ -14,3 +14,11 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface ImageFile {
+  uri: string;
+  type?: string;
+  name?: string;
+  fileName?: string;
+  fileSize?: number;
+}

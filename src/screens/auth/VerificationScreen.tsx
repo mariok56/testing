@@ -128,7 +128,7 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
           </Text>
           <Text
             style={[styles.subtitle, {color: colors.text}, fontVariants.body]}>
-            Enter the 4-digit code sent to {email}
+            Enter the 6-digit code sent to {email}
           </Text>
 
           {verificationMessage && (
@@ -151,7 +151,8 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
             error={errors.code?.message}
             onComplete={code => {
               // Auto-submit when all digits are entered
-              if (code.length === 4) {
+              if (code.length === 6) {
+                // Updated to check for 6 digits
                 handleSubmit(onSubmit)();
               }
             }}

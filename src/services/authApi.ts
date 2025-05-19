@@ -1,5 +1,6 @@
 import apiClient from '../lib/axioInstance';
 import {endpoints} from '../constant/endpoint';
+import {ImageFile} from '../types/auth';
 
 // Types for API responses and requests
 interface AuthResponse {
@@ -27,7 +28,7 @@ interface SignupData {
   password: string;
   firstName: string;
   lastName: string;
-  profileImage?: File;
+  profileImage?: ImageFile;
 }
 
 interface VerifyOtpData {
@@ -49,71 +50,106 @@ interface RefreshTokenData {
 // Authentication API functions
 export const signup = async (data: SignupData): Promise<AuthResponse> => {
   const formData = new FormData();
+
   formData.append('email', data.email);
   formData.append('password', data.password);
   formData.append('firstName', data.firstName);
   formData.append('lastName', data.lastName);
 
   if (data.profileImage) {
-    formData.append('profileImage', data.profileImage);
+    formData.append('profileImage', {
+      uri: data.profileImage.uri,
+      type: data.profileImage.type || 'image/jpeg',
+      name:
+        data.profileImage.fileName || data.profileImage.name || 'profile.jpg',
+    } as any);
   }
 
-  const response = await apiClient.post<AuthResponse>(
-    endpoints.auth.register,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    },
-  );
+  console.log('Signup request to:', endpoints.auth.register);
+  console.log('Form data fields:', {
+    email: data.email,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    hasImage: !!data.profileImage,
+  });
 
-  return response.data;
+  try {
+    const response = await apiClient.post<AuthResponse>(
+      endpoints.auth.register,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
+// FIXED: Changed from form-data to JSON format to match Postman collection
 export const verifyOtp = async (data: VerifyOtpData): Promise<AuthResponse> => {
-  const formData = new FormData();
-  formData.append('email', data.email);
-  formData.append('otp', data.otp);
-
-  const response = await apiClient.post<AuthResponse>(
-    endpoints.auth.verify,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+  try {
+    // Send as JSON instead of FormData
+    const response = await apiClient.post<AuthResponse>(
+      endpoints.auth.verify,
+      {
+        email: data.email,
+        otp: data.otp,
       },
-    },
-  );
-
-  return response.data;
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
+// Updated to match API expectations
 export const resendVerificationOtp = async (
   email: string,
 ): Promise<AuthResponse> => {
-  const formData = new FormData();
-  formData.append('email', email);
-
-  const response = await apiClient.post<AuthResponse>(
-    endpoints.auth.resendOtp,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+  try {
+    // Send as JSON instead of FormData
+    const response = await apiClient.post<AuthResponse>(
+      endpoints.auth.resendOtp,
+      {
+        email: email,
       },
-    },
-  );
-
-  return response.data;
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const login = async (data: LoginData): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>(
-    endpoints.auth.login,
-    data,
-  );
-  return response.data;
+  try {
+    const response = await apiClient.post<AuthResponse>(
+      endpoints.auth.login,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const refreshAccessToken = async (
@@ -165,7 +201,7 @@ export const getUserProfile = async (): Promise<AuthResponse> => {
 export const updateUserProfile = async (data: {
   firstName?: string;
   lastName?: string;
-  profileImage?: File;
+  profileImage?: ImageFile;
 }): Promise<AuthResponse> => {
   const formData = new FormData();
 
@@ -178,7 +214,12 @@ export const updateUserProfile = async (data: {
   }
 
   if (data.profileImage) {
-    formData.append('profileImage', data.profileImage);
+    formData.append('profileImage', {
+      uri: data.profileImage.uri,
+      type: data.profileImage.type || 'image/jpeg',
+      name:
+        data.profileImage.fileName || data.profileImage.name || 'profile.jpg',
+    } as any);
   }
 
   const response = await apiClient.put<AuthResponse>(
