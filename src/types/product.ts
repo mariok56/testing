@@ -3,19 +3,21 @@ export interface ProductImage {
   _id?: string;
 }
 
-export interface ProductLocation {
+export interface Location {
   name: string;
   longitude: number;
   latitude: number;
 }
 
 export interface ProductUser {
+  id: string;
   username?: string;
   email: string;
-  id?: string;
   firstName?: string;
   lastName?: string;
-  profileImage?: {url: string};
+  profileImage?: {
+    url: string;
+  };
 }
 
 export interface Product {
@@ -24,8 +26,26 @@ export interface Product {
   description: string;
   price: number;
   images: ProductImage[];
-  location?: ProductLocation;
+  location?: Location;
   user?: ProductUser;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ProductFilter {
+  page?: number;
+  limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface PaginationData {
+  currentPage: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  totalItems: number;
+  limit: number;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,16 +16,21 @@ import AuthForm from '../../components/organisms/AuthForm';
 import Header from '../../components/molecules/Header';
 import {RegisterFormData, registerSchema} from '../../utils/validation';
 import {RootStackParamList} from '../../types/navigation';
+import {useAuthStore} from '../../store/authStore';
 import {useTheme} from '../../contexts/ThemeContext';
 import {getResponsiveValue} from '../../utils/responsive';
 import fontVariants from '../../utils/fonts';
-import {useSignup} from '../../hooks/useAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 const RegisterScreen: React.FC<Props> = ({navigation}) => {
+  const {signup, isLoading, error, clearError} = useAuthStore();
   const {colors, isDarkMode} = useTheme();
-  const signupMutation = useSignup();
+
+  useEffect(() => {
+    // Clear any previous errors when component mounts
+    clearError();
+  }, [clearError]);
 
   const {
     control,
@@ -47,23 +52,18 @@ const RegisterScreen: React.FC<Props> = ({navigation}) => {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    try {
-      await signupMutation.mutateAsync({
-        firstName,
-        lastName,
-        email: data.email,
-        password: data.password,
-        // We'll handle profile image upload in a more advanced version
-      });
+    const success = await signup(
+      firstName,
+      lastName,
+      data.email,
+      data.password,
+    );
 
-      // If successful, navigate to verification screen
+    if (success) {
       navigation.navigate('Verification', {
         email: data.email,
         password: data.password,
       });
-    } catch (error) {
-      // Error is handled by the mutation
-      // The error message is available in signupMutation.error
     }
   };
 
@@ -131,8 +131,8 @@ const RegisterScreen: React.FC<Props> = ({navigation}) => {
               errors={errors}
               onSubmit={handleSubmit(onSubmit)}
               submitButtonText="Register"
-              isLoading={signupMutation.isPending}
-              errorMessage={signupMutation.error?.message ?? null}
+              isLoading={isLoading}
+              errorMessage={error}
             />
 
             <View style={styles.footerContainer}>

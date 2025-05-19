@@ -1,9 +1,7 @@
-import React, {useEffect} from 'react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {ThemeProvider} from './src/contexts/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import {useAuthInit} from './src/store/authStore';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -16,13 +14,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  const {initAuth} = useAuthInit();
-
-  // Initialize auth state on app launch
-  useEffect(() => {
-    initAuth();
-  }, [initAuth]);
-
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>

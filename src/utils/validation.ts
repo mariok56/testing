@@ -23,26 +23,26 @@ export const verificationSchema = z.object({
   code: z.string().length(4, 'Verification code must be 4 digits'),
 });
 
-// Profile form validation schema
-export const profileSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
 });
 
-// Product form validation schema
+export const profileEditSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  // profileImage is handled separately
+});
+
 export const productSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   price: z.number().positive('Price must be a positive number'),
-  location: z.object({
-    name: z.string().min(3, 'Location name must be at least 3 characters'),
-    longitude: z.number(),
-    latitude: z.number(),
-  }),
+  // location and images are handled separately
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type VerificationFormData = z.infer<typeof verificationSchema>;
-export type ProfileFormData = z.infer<typeof profileSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ProfileEditFormData = z.infer<typeof profileEditSchema>;
 export type ProductFormData = z.infer<typeof productSchema>;

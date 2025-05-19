@@ -10,29 +10,30 @@ import Button from '../../components/atoms/Button';
 import Header from '../../components/molecules/Header';
 import {VerificationFormData, verificationSchema} from '../../utils/validation';
 import {RootStackParamList} from '../../types/navigation';
-import {useAuthStore} from '../../store/authStore';
 import {useTheme} from '../../contexts/ThemeContext';
 import {getResponsiveValue} from '../../utils/responsive';
 import fontVariants from '../../utils/fonts';
+import {useVerifyOtp, useResendOtp, useLogin} from '../../hooks/useAuth';
+import {useAuthStore} from '../../store/authStore';
+import {useQueryClient} from '@tanstack/react-query';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Verification'>;
 
 const VerificationScreen: React.FC<Props> = ({route}) => {
-  const {email} = route.params;
-  const {verify, resendVerificationOtp, isLoading, error} = useAuthStore(
-    state => ({
-      verify: state.verify,
-      resendVerificationOtp: state.resendVerificationOtp,
-      isLoading: state.isLoading,
-      error: state.error,
-    }),
-  );
-  const [verificationMessage, setVerificationMessage] = useState<{
-    text: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const {email, password} = route.params;
   const [timer, setTimer] = useState<number>(60);
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(
+    null,
+  );
+  const [messageType, setMessageType] = useState<'success' | 'error'>('error');
   const {colors, isDarkMode} = useTheme();
+  const {setAuthenticated} = useAuthStore();
+  const queryClient = useQueryClient();
+
+  // React Query mutations
+  const verifyOtpMutation = useVerifyOtp();
+  const resendOtpMutation = useResendOtp();
+  const loginMutation = useLogin();
 
   const {
     control,
@@ -54,39 +55,58 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
     }
   }, [timer]);
 
-  useEffect(() => {
-    if (error) {
-      setVerificationMessage({
-        text: error,
-        type: 'error',
-      });
-    }
-  }, [error]);
-
   const onSubmit = async (data: VerificationFormData) => {
     setVerificationMessage(null);
-    const success = await verify(email, data.code);
 
-    if (!success && !error) {
-      setVerificationMessage({
-        text: 'Invalid verification code',
-        type: 'error',
-      });
+    try {
+      // Verify OTP
+      await verifyOtpMutation.mutateAsync({email, otp: data.code});
+
+      // OTP verification successful, now try to login
+      if (password) {
+        try {
+          await loginMutation.mutateAsync({email, password});
+
+          // Login successful
+          setAuthenticated(true);
+
+          // Invalidate user profile query to fetch fresh data
+          queryClient.invalidateQueries({queryKey: ['user-profile']});
+        } catch (loginError: any) {
+          setMessageType('error');
+          setVerificationMessage(
+            loginError.message ||
+              'Login failed after verification. Please try again.',
+          );
+        }
+      } else {
+        // Handle case where password might not be available
+        setMessageType('success');
+        setVerificationMessage('Verification successful! Please log in.');
+      }
+    } catch (error: any) {
+      setMessageType('error');
+      setVerificationMessage(
+        error.message || 'Verification failed. Please try again.',
+      );
     }
   };
 
-  const resendCode = async () => {
-    const success = await resendVerificationOtp(email);
+  const handleResendCode = async () => {
+    setVerificationMessage(null);
 
-    if (success) {
+    try {
+      await resendOtpMutation.mutateAsync(email);
+
+      // Resend successful
       setTimer(60);
-      setVerificationMessage({
-        text: 'A new code has been sent to your email',
-        type: 'success',
-      });
-      setTimeout(() => {
-        setVerificationMessage(null);
-      }, 3000);
+      setMessageType('success');
+      setVerificationMessage('A new code has been sent to your email');
+    } catch (error: any) {
+      setMessageType('error');
+      setVerificationMessage(
+        error.message || 'Failed to resend verification code',
+      );
     }
   };
 
@@ -100,7 +120,7 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
       <SafeAreaView
         style={[styles.container, {backgroundColor: colors.background}]}
         edges={['top']}>
-        <Header showBackButton={false} showThemeToggle={true} />
+        <Header title="Verification" showBackButton />
         <View style={styles.content}>
           <Text
             style={[styles.title, {color: colors.text}, fontVariants.heading1]}>
@@ -115,12 +135,13 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
             <Text
               style={[
                 styles.messageText,
-                verificationMessage.type === 'error'
-                  ? {color: colors.error}
-                  : {color: colors.success},
+                {
+                  color:
+                    messageType === 'error' ? colors.error : colors.success,
+                },
                 fontVariants.bodyBold,
               ]}>
-              {verificationMessage.text}
+              {verificationMessage}
             </Text>
           )}
 
@@ -128,12 +149,18 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
             name="code"
             control={control}
             error={errors.code?.message}
+            onComplete={code => {
+              // Auto-submit when all digits are entered
+              if (code.length === 4) {
+                handleSubmit(onSubmit)();
+              }
+            }}
           />
 
           <Button
             title="Verify"
             onPress={handleSubmit(onSubmit)}
-            loading={isLoading}
+            loading={verifyOtpMutation.isPending || loginMutation.isPending}
           />
 
           <View style={styles.resendContainer}>
@@ -160,7 +187,7 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
                     {color: colors.primary},
                     fontVariants.bodyBold,
                   ]}
-                  onPress={resendCode}>
+                  onPress={handleResendCode}>
                   Resend
                 </Text>
               )}

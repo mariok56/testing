@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useQueryClient} from '@tanstack/react-query';
 
 import AuthForm from '../../components/organisms/AuthForm';
 import {loginSchema, LoginFormData} from '../../utils/validation';
@@ -19,17 +20,21 @@ import {useTheme} from '../../contexts/ThemeContext';
 import {getResponsiveValue} from '../../utils/responsive';
 import fontVariants from '../../utils/fonts';
 import Header from '../../components/molecules/Header';
+import {useLogin, useUserProfile} from '../../hooks/useAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({navigation}) => {
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const {login, isLoading, error} = useAuthStore(state => ({
-    login: state.login,
-    isLoading: state.isLoading,
-    error: state.error,
-  }));
+  const {setAuthenticated, setUser} = useAuthStore();
   const {colors, isDarkMode} = useTheme();
+  const queryClient = useQueryClient();
+
+  // Use React Query mutation for login
+  const loginMutation = useLogin();
+
+  // Initialize the user profile query at component level
+  // (We'll only use it to invalidate/refetch after login)
+  const userProfileQuery = useUserProfile();
 
   const {
     control,
@@ -44,16 +49,25 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setLoginError(null);
-    const success = await login(data.email, data.password);
-
-    if (!success) {
-      setLoginError('Invalid email or password');
-    } else {
-      navigation.navigate('Verification', {
+    try {
+      await loginMutation.mutateAsync({
         email: data.email,
         password: data.password,
       });
+
+      // Login successful, set authenticated state
+      setAuthenticated(true);
+
+      // Invalidate and refetch user profile
+      queryClient.invalidateQueries({queryKey: ['user-profile']});
+
+      // We don't need to call useUserProfile() here - it was initialized at component level
+      // If the query has data after refetching, we can set the user
+      if (userProfileQuery.data) {
+        setUser(userProfileQuery.data);
+      }
+    } catch (error) {
+      // Error is handled by the mutation
     }
   };
 
@@ -83,7 +97,7 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       <SafeAreaView
         style={[styles.container, {backgroundColor: colors.background}]}
         edges={['top']}>
-        <Header showBackButton={false} showThemeToggle={true} />
+        <Header title="Login" showBackButton={false} showThemeToggle={true} />
 
         <View style={styles.content}>
           <Text
@@ -101,9 +115,22 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
             errors={errors}
             onSubmit={handleSubmit(onSubmit)}
             submitButtonText="Login"
-            isLoading={isLoading}
-            errorMessage={loginError || error}
+            isLoading={loginMutation.isPending}
+            errorMessage={loginMutation.error?.message ?? null}
           />
+
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text
+              style={[
+                styles.forgotPasswordText,
+                {color: colors.primary},
+                fontVariants.body,
+              ]}>
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.footerContainer}>
             <Text
@@ -145,6 +172,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginBottom: getResponsiveValue(32),
+  },
+  forgotPassword: {
+    alignSelf: 'center',
+    marginTop: getResponsiveValue(16),
+  },
+  forgotPasswordText: {
+    textAlign: 'center',
   },
   footerContainer: {
     flexDirection: 'row',
