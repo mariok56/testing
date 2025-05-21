@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, StatusBar} from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {View, Text, StyleSheet, StatusBar, Alert} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -19,7 +19,7 @@ import {useQueryClient} from '@tanstack/react-query';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Verification'>;
 
-const VerificationScreen: React.FC<Props> = ({route}) => {
+const VerificationScreen: React.FC<Props> = ({route, navigation}) => {
   const {email, password} = route.params;
   const [timer, setTimer] = useState<number>(60);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(
@@ -29,6 +29,9 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
   const {colors, isDarkMode} = useTheme();
   const {setAuthenticated} = useAuthStore();
   const queryClient = useQueryClient();
+
+  // Add this ref to track if we've already sent the initial OTP request
+  const initialOtpRequestSent = useRef(false);
 
   // React Query mutations
   const verifyOtpMutation = useVerifyOtp();
@@ -46,6 +49,41 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
     },
   });
 
+  // Automatically request a new OTP when component mounts - FIXED VERSION WITH PROPER DEPENDENCIES
+  useEffect(() => {
+    // Only send OTP once when component mounts
+    const autoResendOtp = async () => {
+      // Check if we've already sent the initial request to prevent duplicates
+      if (initialOtpRequestSent.current) {
+        return;
+      }
+
+      // Mark that we've sent the request
+      initialOtpRequestSent.current = true;
+
+      try {
+        setVerificationMessage('Sending verification code...');
+        await resendOtpMutation.mutateAsync(email);
+        setMessageType('success');
+        setVerificationMessage(
+          'A verification code has been sent to your email',
+        );
+        setTimer(60); // Reset timer
+      } catch (error: any) {
+        setMessageType('error');
+
+        // Error handling is now user-friendly from the hook
+        setVerificationMessage(
+          error.message || 'Failed to send verification code',
+        );
+      }
+    };
+
+    autoResendOtp();
+
+    // Include the dependencies but still use the ref check to prevent multiple calls
+  }, [email, resendOtpMutation, setMessageType, setTimer]);
+
   useEffect(() => {
     if (timer > 0) {
       const interval = setInterval(() => {
@@ -59,40 +97,63 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
     setVerificationMessage(null);
 
     try {
+      // Ensure OTP is properly formatted
+      const formattedOtp = data.code.toString().trim();
+      console.log('Submitting verification with OTP:', formattedOtp);
+
       // Verify OTP
-      await verifyOtpMutation.mutateAsync({email, otp: data.code});
+      await verifyOtpMutation.mutateAsync({email, otp: formattedOtp});
 
       // OTP verification successful, now try to login
       if (password) {
         try {
-          await loginMutation.mutateAsync({email, password});
+          await loginMutation.mutateAsync({
+            email,
+            password,
+            token_expires_in: '1y',
+          });
 
           // Login successful
           setAuthenticated(true);
 
           // Invalidate user profile query to fetch fresh data
           queryClient.invalidateQueries({queryKey: ['user-profile']});
-        } catch (loginError: any) {
+
+          // Show success message
+          Alert.alert(
+            'Success',
+            'Your email has been verified and you are now logged in!',
+            [{text: 'OK'}],
+          );
+        } catch (error: any) {
           setMessageType('error');
           setVerificationMessage(
-            loginError.message ||
-              'Login failed after verification. Please try again.',
+            error.message || 'Login failed after verification',
           );
         }
       } else {
         // Handle case where password might not be available
         setMessageType('success');
         setVerificationMessage('Verification successful! Please log in.');
+
+        // Redirect to login
+        setTimeout(() => {
+          navigation.navigate('Login');
+        }, 1500);
       }
     } catch (error: any) {
       setMessageType('error');
-      setVerificationMessage(
-        error.message || 'Verification failed. Please try again.',
-      );
+      setVerificationMessage(error.message || 'Verification failed');
     }
   };
 
+  // Updated to prevent rapid multiple clicks
   const handleResendCode = async () => {
+    // Prevent multiple rapid clicks or resending while request is in progress
+    if (resendOtpMutation.isPending || timer > 0) {
+      return;
+    }
+
     setVerificationMessage(null);
 
     try {
@@ -152,7 +213,6 @@ const VerificationScreen: React.FC<Props> = ({route}) => {
             onComplete={code => {
               // Auto-submit when all digits are entered
               if (code.length === 6) {
-                // Updated to check for 6 digits
                 handleSubmit(onSubmit)();
               }
             }}

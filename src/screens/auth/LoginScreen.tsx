@@ -33,7 +33,6 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
   const loginMutation = useLogin();
 
   // Initialize the user profile query at component level
-  // (We'll only use it to invalidate/refetch after login)
   const userProfileQuery = useUserProfile();
 
   const {
@@ -53,6 +52,7 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       await loginMutation.mutateAsync({
         email: data.email,
         password: data.password,
+        token_expires_in: '1y',
       });
 
       // Login successful, set authenticated state
@@ -61,13 +61,21 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       // Invalidate and refetch user profile
       queryClient.invalidateQueries({queryKey: ['user-profile']});
 
-      // We don't need to call useUserProfile() here - it was initialized at component level
       // If the query has data after refetching, we can set the user
       if (userProfileQuery.data) {
         setUser(userProfileQuery.data);
       }
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch (error: any) {
+      // Special case for email verification needed
+      if (error.message.includes('verify your email')) {
+        // Navigate to verification screen with credentials
+        navigation.navigate('Verification', {
+          email: data.email,
+          password: data.password,
+        });
+      }
+
+      // Other errors are handled by displaying the error message in AuthForm
     }
   };
 

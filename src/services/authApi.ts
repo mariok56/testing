@@ -24,10 +24,10 @@ interface AuthResponse {
 }
 
 interface SignupData {
-  email: string;
-  password: string;
   firstName: string;
   lastName: string;
+  email: string;
+  password: string;
   profileImage?: ImageFile;
 }
 
@@ -51,17 +51,17 @@ interface RefreshTokenData {
 export const signup = async (data: SignupData): Promise<AuthResponse> => {
   const formData = new FormData();
 
-  formData.append('email', data.email);
-  formData.append('password', data.password);
   formData.append('firstName', data.firstName);
   formData.append('lastName', data.lastName);
+  formData.append('email', data.email);
+  formData.append('password', data.password);
 
-  if (data.profileImage) {
+  if (data.profileImage && data.profileImage.uri) {
+    // Format to match exactly what Postman would send
     formData.append('profileImage', {
       uri: data.profileImage.uri,
       type: data.profileImage.type || 'image/jpeg',
-      name:
-        data.profileImage.fileName || data.profileImage.name || 'profile.jpg',
+      name: data.profileImage.fileName || 'profile.jpg',
     } as any);
   }
 
@@ -86,38 +86,41 @@ export const signup = async (data: SignupData): Promise<AuthResponse> => {
 
     return response.data;
   } catch (error) {
+    console.error('Signup error:', error);
     throw error;
   }
 };
 
-// FIXED: Changed from form-data to JSON format to match Postman collection
+// In src/services/authApi.ts
 export const verifyOtp = async (data: VerifyOtpData): Promise<AuthResponse> => {
   try {
-    // Send as JSON instead of FormData
+    // Build the exact payload that works in Postman
+    const payload = {
+      email: data.email,
+      otp: data.otp,
+    };
+
+    // Log the exact payload for debugging
+    console.log('Verify OTP payload:', payload);
+
     const response = await apiClient.post<AuthResponse>(
       endpoints.auth.verify,
-      {
-        email: data.email,
-        otp: data.otp,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
+      payload,
     );
+
     return response.data;
   } catch (error) {
+    console.error('Verify OTP error:', error);
     throw error;
   }
 };
 
-// Updated to match API expectations
 export const resendVerificationOtp = async (
   email: string,
 ): Promise<AuthResponse> => {
   try {
-    // Send as JSON instead of FormData
+    console.log(`Sending OTP resend request for email: ${email}`);
+
     const response = await apiClient.post<AuthResponse>(
       endpoints.auth.resendOtp,
       {
@@ -129,17 +132,27 @@ export const resendVerificationOtp = async (
         },
       },
     );
+
+    console.log('OTP resend response:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Resend OTP error:', error);
     throw error;
   }
 };
 
 export const login = async (data: LoginData): Promise<AuthResponse> => {
   try {
+    // Include token_expires_in to match Postman
+    const payload = {
+      email: data.email,
+      password: data.password,
+      token_expires_in: data.token_expires_in || '5m',
+    };
+
     const response = await apiClient.post<AuthResponse>(
       endpoints.auth.login,
-      data,
+      payload,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -148,6 +161,7 @@ export const login = async (data: LoginData): Promise<AuthResponse> => {
     );
     return response.data;
   } catch (error) {
+    console.error('Login error:', error);
     throw error;
   }
 };
@@ -158,6 +172,7 @@ export const refreshAccessToken = async (
   try {
     const data: RefreshTokenData = {
       refreshToken,
+      token_expires_in: '1y',
     };
 
     const response = await apiClient.post<AuthResponse>(
@@ -213,12 +228,11 @@ export const updateUserProfile = async (data: {
     formData.append('lastName', data.lastName);
   }
 
-  if (data.profileImage) {
+  if (data.profileImage && data.profileImage.uri) {
     formData.append('profileImage', {
       uri: data.profileImage.uri,
       type: data.profileImage.type || 'image/jpeg',
-      name:
-        data.profileImage.fileName || data.profileImage.name || 'profile.jpg',
+      name: data.profileImage.fileName || 'profile.jpg',
     } as any);
   }
 

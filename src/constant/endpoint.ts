@@ -1,26 +1,26 @@
 export const endpoints = {
   auth: {
-    login: '/auth/login',
-    register: '/auth/signup',
-    verify: '/auth/verify-otp',
-    resendOtp: '/auth/resend-verification-otp', // Updated to match the API documentation
-    refreshToken: '/auth/refresh-token',
-    forgotPassword: '/auth/forgot-password',
+    login: '/api/auth/login',
+    register: '/api/auth/signup',
+    verify: '/api/auth/verify-otp',
+    resendOtp: '/api/auth/resend-verification-otp',
+    refreshToken: '/api/auth/refresh-token',
+    forgotPassword: '/api/auth/forgot-password',
   },
   user: {
-    getUser: '/user/profile', // Changed from '/user/profile/:userId'
-    getUserById: '/user/profile/:userId', // Added for getting other user profiles
-    updateUser: '/user/profile',
+    getUser: '/api/user/profile',
+    getUserById: '/api/user/profile/:userId',
+    updateUser: '/api/user/profile',
   },
   posts: {
-    getPosts: '/posts',
+    getPosts: '/api/posts',
   },
   products: {
-    getProducts: '/products',
-    searchProducts: '/products/search',
-    getProductById: '/products/:id',
-    createProduct: '/products',
-    updateProduct: '/products/:id',
-    deleteProduct: '/products/:id',
+    getProducts: '/api/products',
+    searchProducts: '/api/products/search',
+    getProductById: '/api/products/:id',
+    createProduct: '/api/products',
+    updateProduct: '/api/products/:id',
+    deleteProduct: '/api/products/:id',
   },
 };

@@ -8,9 +8,10 @@ import {useQuery} from '@tanstack/react-query';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerificationScreen from '../screens/auth/VerificationScreen';
-import ProductListScreen from '../screens/products/ProductListScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgetPasswordScreen';
+import ProfileEditScreen from '../screens/Profile/ProfileEditScreen';
+import TabNavigator from './TabNav';
 import {RootStackParamList} from '../types/navigation';
 import {useAuthStore} from '../store/authStore';
 import {useTheme} from '../contexts/ThemeContext';
@@ -33,9 +34,7 @@ const useInitAuth = () => {
 
       return isAuthenticated;
     },
-    // Don't refetch this query
     staleTime: Infinity,
-    // Don't retry on failure
     retry: false,
   });
 };
@@ -73,11 +72,12 @@ const AppNavigator: React.FC = () => {
           }}>
           {isAuthenticated ? (
             <>
-              <Stack.Screen name="ProductList" component={ProductListScreen} />
+              <Stack.Screen name="Home" component={TabNavigator} />
               <Stack.Screen
                 name="ProductDetail"
                 component={ProductDetailScreen}
               />
+              <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
             </>
           ) : (
             <>
